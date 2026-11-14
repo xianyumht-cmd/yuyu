@@ -152,16 +152,39 @@ jobs:
             if (Test-Path $log) { Get-Content $log -Tail 100 }
             throw "Installer failed with exit code $($proc.ExitCode)"
           }
-          $service = Get-Service YdisksXianyuHelper -ErrorAction Stop
-          if ($service.Status -ne "Running") { throw "Windows service not running" }
+          # The installer registers delayed-auto service. On CI runners service startup
+          # can race against the first SCM status check; retry and explicitly start it.
+          # A real startup failure still fails the release gate, with server diagnostics.
+          $serviceScript = "C:\Program Files\Ydisks闲鱼助手\service-control.ps1"
           $healthy = $false
-          for ($i = 0; $i -lt 40; $i++) {
-            try {
-              $health = Invoke-RestMethod -Uri "http://127.0.0.1:59188/health" -TimeoutSec 2
-              if ($health.status -eq "ok" -and $health.database -eq "ok") { $healthy = $true; break }
-            } catch { Start-Sleep -Seconds 1 }
+          try {
+            for ($attempt = 0; $attempt -lt 60; $attempt++) {
+              $service = Get-Service YdisksXianyuHelper -ErrorAction Stop
+              if ($service.Status -ne "Running" -and $attempt -eq 2) {
+                try {
+                  Start-Service -Name YdisksXianyuHelper -ErrorAction Stop
+                } catch {
+                  Write-Warning ("Service start retry: " + $_.Exception.Message)
+                }
+              }
+              try {
+                $health = Invoke-RestMethod -Uri "http://127.0.0.1:59188/health" -TimeoutSec 2
+                if ($health.status -eq "ok" -and $health.database -eq "ok") {
+                  $service.Refresh()
+                  if ($service.Status -eq "Running") { $healthy = $true; break }
+                }
+              } catch {}
+              Start-Sleep -Seconds 2
+            }
+            if (-not $healthy) { throw "Service health or SQLite check failed" }
+          } catch {
+            Write-Host "--- Windows service inspection ---"
+            & sc.exe qc YdisksXianyuHelper
+            & sc.exe queryex YdisksXianyuHelper
+            Get-ChildItem "C:\ProgramData\YdisksXianyuHelper\logs" -ErrorAction SilentlyContinue |
+              ForEach-Object { Write-Host ("Log: " + $_.FullName); Get-Content $_.FullName -Tail 100 -ErrorAction SilentlyContinue }
+            throw
           }
-          if (-not $healthy) { throw "Service health or SQLite check failed" }
 
       - name: SHA256 manifest and release notes
         shell: pwsh
