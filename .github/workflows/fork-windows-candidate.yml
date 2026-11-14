@@ -183,6 +183,35 @@ jobs:
             & sc.exe queryex YdisksXianyuHelper
             Get-ChildItem "C:\ProgramData\YdisksXianyuHelper\logs" -ErrorAction SilentlyContinue |
               ForEach-Object { Write-Host ("Log: " + $_.FullName); Get-Content $_.FullName -Tail 100 -ErrorAction SilentlyContinue }
+            # SCM does not persist the Go service error; retry in foreground only
+            # for diagnostics on a distinct loopback port, without modifying user data.
+            Write-Host "--- Capturing foreground startup failure ---"
+            $program = Join-Path $env:ProgramFiles "Ydisks Xianyu Helper\xianyu-server.exe"
+            $stateDir = Join-Path $env:ProgramData "YdisksXianyuHelper"
+            $runtime = Join-Path $env:ProgramFiles "Ydisks Xianyu Helper\playwright-runtime"
+            $stdoutPath = Join-Path $env:RUNNER_TEMP "yuyu-start-stdout.txt"
+            $stderrPath = Join-Path $env:RUNNER_TEMP "yuyu-start-stderr.txt"
+            if (Test-Path $program) {
+              $args = @(
+                "-workdir", $stateDir,
+                "-data-key-file", (Join-Path $stateDir "data-key"),
+                "-addr", "127.0.0.1:59189",
+                "-playwright-runtime-root", $runtime
+              )
+              $diag = $null
+              try {
+                $diag = Start-Process -FilePath $program -ArgumentList $args -PassThru -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+                if (-not $diag.WaitForExit(15000)) { Write-Host "Foreground process remained running for 15 seconds" }
+                else { Write-Host ("Foreground exit code: " + $diag.ExitCode) }
+              } catch {
+                Write-Warning ("Foreground diagnostic failed: " + $_.Exception.Message)
+              } finally {
+                if ($diag -and -not $diag.HasExited) { Stop-Process -Id $diag.Id -Force -ErrorAction SilentlyContinue }
+              }
+              foreach ($logPath in @($stdoutPath, $stderrPath)) {
+                if (Test-Path $logPath) { Write-Host ("Foreground log: " + $logPath); Get-Content $logPath -Tail 120 }
+              }
+            }
             throw
           }
 
