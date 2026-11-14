@@ -239,6 +239,7 @@ func runServer(parent context.Context, opts serverOptions) error {
 		infrastructure.logger.Error("服务运行时装配失败", "err", logsafe.Error(err))
 		return err
 	}
+	// err 表示服务运行时的 HTTP 与组件生命周期错误，必须写入文件日志便于 Windows 服务排错。
 	if err := runServerLifecycle(ctx, runtime, infrastructure.logger); err != nil {
 		infrastructure.logger.Error("服务生命周期退出", "err", logsafe.Error(err))
 		return err
