@@ -1,7 +1,7 @@
 ﻿[CmdletBinding()]
 param(
     [switch]$ProbeOnly,
-    [ValidateSet('Auto','Fork','Upstream')][string]$Source = 'Auto',
+    [ValidateSet('Auto','Fork')][string]$Source = 'Auto',
     [string]$InstallerPath = '',
     [string]$ExpectedSha256 = ''
 )
@@ -9,7 +9,6 @@ param(
 $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $fork = 'xianyumht-cmd/yuyu'
-$upstream = 'Christ9038/Ydisks-Xianyu-Helper'
 $assetName = 'Ydisks-Xianyu-Helper-Setup.exe'
 $serviceName = 'YdisksXianyuHelper'
 $adminPage = 'http://127.0.0.1:59188'
@@ -51,10 +50,24 @@ function Invoke-Probe {
 }
 
 # 下载只接受固定 GitHub Releases URL；所有网络安装包必须用 Release 的 SHA256SUMS 进行完整性校验。
-function Get-LatestRelease([string]$Repository) {
+function Get-ForkRelease {
+    # Only a CI-built candidate matching our fork's latest feature-branch HEAD is eligible.
+    $branchName = 'feat/gg-edgeone-api-delivery-20261115'
+    $branchURL = 'https://api.github.com/repos/' + $fork + '/branches/' + [Uri]::EscapeDataString($branchName)
+    $branchInfo = Invoke-RestMethod -Uri $branchURL -Headers @{'User-Agent'='Yuyu-Windows-OneClick/2.0'} -TimeoutSec 25
+    $head = [string]$branchInfo.commit.sha
+    if ($head -notmatch '^[a-f0-9]{40}$') { throw 'Could not verify fork branch HEAD.' }
+    $expectedTag = 'yuyu-win-' + $head.Substring(0, 12)
+    $releaseURL = 'https://api.github.com/repos/' + $fork + '/releases/tags/' + $expectedTag
     try {
-        return Invoke-RestMethod -Uri ("https://api.github.com/repos/" + $Repository + "/releases/latest") -Headers @{'User-Agent'='Yuyu-Windows-OneClick/1.0'} -TimeoutSec 25
-    } catch { return $null }
+        $release = Invoke-RestMethod -Uri $releaseURL -Headers @{'User-Agent'='Yuyu-Windows-OneClick/2.0'} -TimeoutSec 25
+    } catch {
+        throw ('Fork Windows build is not published for current commit ' + $head.Substring(0, 12) + '. See https://github.com/' + $fork + '/actions/workflows/fork-windows-candidate.yml')
+    }
+    if (-not $release.prerelease -or $release.draft -or [string]$release.target_commitish -ne $head) {
+        throw 'Refusing a fork release that does not match the current branch commit.'
+    }
+    return $release
 }
 function Download-Checked([string]$Url,[string]$Path) {
     $partial = $Path + '.partial'
@@ -110,19 +123,9 @@ try {
     $expected = $ExpectedSha256
     $chosenRepo = 'local'
     if (-not $setup) {
-        $release = $null
-        if ($Source -ne 'Upstream') {
-            $release = Get-LatestRelease $fork
-            if ($release -and -not ($release.assets | Where-Object name -eq $assetName)) { $release = $null }
-            if ($release) { $chosenRepo = $fork }
-            elseif ($Source -eq 'Fork') { throw '你的 Fork 没有可用的 Windows Release，不能假装部署 Fork 版本。' }
-            else {
-                Write-Warning 'Fork 暂无 Windows Release；上游原版不包含你 Fork 中的修改。'
-                if (-not (Ask-Yes '是否明确使用上游正式安装包？')) { throw '已取消上游回退。' }
-            }
-        }
-        if (-not $release) { $chosenRepo = $upstream; $release = Get-LatestRelease $upstream }
-        if (-not $release) { throw 'GitHub Release 无法访问，请用 -InstallerPath 提供本地安装包。' }
+        $release = Get-ForkRelease
+        $chosenRepo = $fork
+        Write-Host ('Using YOUR fork candidate: ' + $release.tag_name)
         $asset = $release.assets | Where-Object name -eq $assetName | Select-Object -First 1
         $sumAsset = $release.assets | Where-Object name -eq 'SHA256SUMS' | Select-Object -First 1
         if (-not $asset -or -not $sumAsset) { throw '安装包或校验和文件缺失，拒绝安装。' }
