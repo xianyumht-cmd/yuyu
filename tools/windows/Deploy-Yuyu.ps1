@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [switch]$ProbeOnly,
     [ValidateSet('Auto','Fork','Upstream')][string]$Source = 'Auto',
@@ -132,61 +132,7 @@ try {
         if ($checksumLine -notmatch '^([0-9a-fA-F]{64})\s+\*?Ydisks-Xianyu-Helper-Setup\.exe$') {
             throw 'SHA256SUMS 中找不到 Windows 安装包的合法校验记录。'
         }
-        $expected = [regex]::Match($checksumLine, '^([0-9a-fA-F]{64})\s+\*?Ydisks-Xianyu-Helper-Setup\.exe
-        $setup = Join-Path $downloadDir ($release.tag_name + '-' + $assetName)
-        Download-Checked $asset.browser_download_url $setup
-    } else {
-        if (-not $expected -or $expected -notmatch '^[0-9a-fA-F]{64}$') {
-            throw '本地安装包必须同时提供 -ExpectedSha256 的完整 64 位 SHA256。'
-        }
-        $setup = (Resolve-Path -LiteralPath $setup -ErrorAction Stop).Path
-    }
-
-    $actual = (Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash
-    if ($actual -ine $expected) { throw 'SHA256 校验失败，拒绝运行安装包。' }
-    Write-Host ('已验证安装包 SHA256：' + $actual)
-    Write-Host ('安装来源：' + $chosenRepo)
-
-    $signature = Get-AuthenticodeSignature -FilePath $setup
-    if ($signature.Status -ne 'Valid') {
-        Write-Warning ('安装包的 Windows 签名验证状态：' + $signature.Status)
-        if (-not (Ask-Yes '签名不受信任，是否仍要使用已通过 SHA256 校验的安装包？')) {
-            throw '用户拒绝安装签名状态异常的安装包。'
-        }
-    }
-
-    $dataRoot = Join-Path $env:ProgramData $serviceName
-    if (Test-Path $dataRoot) {
-        Write-Warning ('已发现既有数据目录：' + $dataRoot)
-        if (-not (Ask-Yes '是否备份现有数据并继续升级？')) { throw '用户取消升级。' }
-        $backupDir = Join-Path $workDir ('Backup\' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
-        New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
-        $old = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
-        if ($old -and $old.Status -ne 'Stopped') { Stop-Service -Name $serviceName -ErrorAction Stop }
-        Copy-Item -Path $dataRoot -Destination (Join-Path $backupDir $serviceName) -Recurse -Force
-        Write-Host ('完整数据备份（含加密密钥）：' + $backupDir)
-    }
-
-    $logFile = Join-Path $logDir ('install-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.log')
-    $arguments = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG="' + $logFile + '"'
-    $installer = Start-Process -FilePath $setup -ArgumentList $arguments -Wait -PassThru
-    if ($installer.ExitCode -ne 0) { throw ('Windows 安装程序失败，错误码：' + $installer.ExitCode + '，日志：' + $logFile) }
-    $healthy = $false
-    for ($i = 0; $i -lt 45; $i++) {
-        try {
-            $health = Invoke-RestMethod -Uri ($adminPage + '/health') -TimeoutSec 3
-            if ($health.status -eq 'ok' -and $health.database -eq 'ok') { $healthy = $true; break }
-        } catch { }
-        Start-Sleep -Seconds 2
-    }
-    if (-not $healthy) { throw '安装程序已运行，但后台健康检查未通过。请检查服务和日志。' }
-    Write-Host ('部署成功，管理页面：' + $adminPage) -ForegroundColor Green
-    Start-Process $adminPage
-} catch {
-    Write-Error ('部署/探针失败：' + $_.Exception.Message)
-    exit 1
-}
-).Groups[1].Value
+        $expected = [regex]::Match($checksumLine, '^([0-9a-fA-F]{64})\s+\*?Ydisks-Xianyu-Helper-Setup\.exe$').Groups[1].Value
         $setup = Join-Path $downloadDir ($release.tag_name + '-' + $assetName)
         Download-Checked $asset.browser_download_url $setup
     } else {
