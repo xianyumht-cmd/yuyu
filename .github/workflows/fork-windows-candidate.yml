@@ -149,7 +149,22 @@ jobs:
           $log = Join-Path $env:RUNNER_TEMP "yuyu-fork-install.log"
           $proc = Start-Process -FilePath $installer -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/LOG=$log") -Wait -PassThru
           if ($proc.ExitCode -ne 0) {
-            if (Test-Path $log) { Get-Content $log -Tail 100 }
+            Write-Host ("Installer exited with code " + $proc.ExitCode)
+            if (Test-Path $log) { Get-Content $log -Tail 35 }
+            Write-Host "--- Startup logs ---"
+            $logsDir = Join-Path $env:ProgramData "YdisksXianyuHelper\logs"
+            if (Test-Path $logsDir) {
+              Get-ChildItem -LiteralPath $logsDir -File | ForEach-Object {
+                Write-Host ("Log file: " + $_.Name)
+                Get-Content -LiteralPath $_.FullName -Tail 80 -ErrorAction Continue
+              }
+            }
+            Write-Host "--- Service state ---"
+            & "$env:SystemRoot\System32\sc.exe" queryex YdisksXianyuHelper
+            Write-Host "--- Recent service events ---"
+            Get-WinEvent -FilterHashtable @{LogName='System'; ProviderName='Service Control Manager'; StartTime=(Get-Date).AddMinutes(-12)} -MaxEvents 20 -ErrorAction SilentlyContinue |
+              Where-Object { $_.Message -match 'Ydisks|xianyu' } |
+              Select-Object TimeCreated, Id, Message | Format-List | Out-String | Write-Host
             throw "Installer failed with exit code $($proc.ExitCode)"
           }
           # The installer registers delayed-auto service. On CI runners service startup
