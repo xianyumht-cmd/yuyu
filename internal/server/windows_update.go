@@ -20,6 +20,7 @@ import (
 
 // windowsUpdateRepo 固定为本项目自己构建且经过 Windows 健康验收的 Fork。
 const windowsUpdateRepo = "https://api.github.com/repos/xianyumht-cmd/yuyu"
+
 // windowsUpdateBranch 是只允许一键更新的 Fork 功能分支。
 const windowsUpdateBranch = "feat/gg-edgeone-api-delivery-20261115"
 
