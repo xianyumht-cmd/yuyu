@@ -4,16 +4,8 @@ on:
   push:
     branches:
       - feat/gg-edgeone-api-delivery-20261115
-    paths:
-      - 'tools/windows/**'
-      - '.github/workflows/fork-windows-candidate.yml'
-      - 'docs/wiki/GG-EdgeOne-API-自动发卡.zh-CN.md'
-      - 'cmd/**'
-      - 'internal/**'
-      - 'frontend/**'
-      - 'go.mod'
-      - 'go.sum'
-      - 'packaging/windows/**'
+    # 所有推送都必须生成与分支 HEAD 对应的 Release，避免文档提交
+    # 导致后台更新器寻找不存在的 SHA 标签。
   workflow_dispatch:
 
 permissions:
