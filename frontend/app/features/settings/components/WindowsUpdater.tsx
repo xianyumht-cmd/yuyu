@@ -14,11 +14,21 @@ interface WindowsReleaseInfo {
   available: boolean;
   /** task 保存更新进程的跨服务重启状态。 */
   task?: {
+    /** stage 表示更新任务当前执行阶段。 */
     stage: string;
+    /** message 是后台更新器写入的简短状态说明。 */
     message: string;
+    /** release 是任务对应的可信 GitHub Release 标签。 */
     release: string;
+    /** updated_at 为任务状态上次修改时间。 */
     updated_at: string;
   };
+}
+
+/** WindowsUpdateStartResponse 是启动更新任务时返回的非敏感提示。 */
+interface WindowsUpdateStartResponse {
+  /** message 是已提交更新请求的回执信息。 */
+  message: string;
 }
 
 /** WindowsUpdater 在系统设置中提供管理员主动确认的一键更新入口。 */
@@ -33,24 +43,24 @@ const WindowsUpdater: React.FC = () => {
   const [started, setStarted] = React.useState(false);
 
   // refresh 从本地受管理员保护的接口读取状态。
-  const refresh = React.useCallback(async () => {
+  const refresh = React.useCallback(/* callback 是读取后台更新状态的稳定异步函数。 */ async () => {
     try {
       // next 是只读更新摘要，不包含授权令牌或自定义外部 URL。
       const next = await get<WindowsReleaseInfo>('/api/v1/settings/update', undefined, { timeoutMs: 20000 });
       setRelease(next);
       setError('');
       if (next.task?.stage === 'success' || next.task?.stage === 'failed') setStarted(false);
-    } catch (err) {
+    } catch (/* err 是检查更新发生的网络或鉴权错误。 */ err) {
       if (!started) setError(err instanceof Error ? err.message : '检查更新失败');
     }
   }, [started]);
 
   // 每次进入设置页都检查一次；正在安装时允许服务暂时离线并继续轮询。
-  React.useEffect(() => {
+  React.useEffect(/* 进入设置页时检查更新并在卸载时清理轮询。 */ () => {
     void refresh();
     // interval 是只在本组件存活期间执行的状态轮询。
-    const interval = window.setInterval(() => { void refresh(); }, started ? 5000 : 30000);
-    return () => window.clearInterval(interval);
+    const interval = window.setInterval(/* callback 定期读取后台版本和安装状态。 */ () => { void refresh(); }, started ? 5000 : 30000);
+    return /* 清理页面轮询计时器。 */ () => window.clearInterval(interval);
   }, [refresh, started]);
 
   // performUpdate 只要求管理员确认；实际版本选择及完整性验证全部由服务端完成。
@@ -59,10 +69,10 @@ const WindowsUpdater: React.FC = () => {
     setBusy(true);
     setError('');
     try {
-      await post<{ message: string }>('/api/v1/settings/update', {});
+      await post<WindowsUpdateStartResponse>('/api/v1/settings/update', {});
       setStarted(true);
       await refresh();
-    } catch (err) {
+    } catch (/* err 是启动安装任务产生的校验或授权错误。 */ err) {
       setError(err instanceof Error ? err.message : '启动更新失败');
     } finally {
       setBusy(false);
@@ -91,10 +101,10 @@ const WindowsUpdater: React.FC = () => {
         )}
         {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
         <div className="flex flex-wrap gap-3">
-          <button type="button" onClick={() => void refresh()} className="rounded-xl bg-gray-100 px-4 py-2 font-bold text-gray-700 hover:bg-gray-200">
+          <button type="button" onClick={/* 当前回调触发一次手动更新检查。 */ () => void refresh()} className="rounded-xl bg-gray-100 px-4 py-2 font-bold text-gray-700 hover:bg-gray-200">
             <RefreshCw className="mr-2 inline h-4 w-4" />检查更新
           </button>
-          <button type="button" disabled={!release?.available || !release.supported || busy || started} onClick={() => void performUpdate()} className="rounded-xl bg-sky-600 px-4 py-2 font-bold text-white hover:bg-sky-700 disabled:opacity-40">
+          <button type="button" disabled={!release?.available || !release.supported || busy || started} onClick={/* 当前回调请求管理员确认并启动更新。 */ () => void performUpdate()} className="rounded-xl bg-sky-600 px-4 py-2 font-bold text-white hover:bg-sky-700 disabled:opacity-40">
             <Download className="mr-2 inline h-4 w-4" />{busy ? '正在启动更新' : '立即更新'}
           </button>
         </div>
