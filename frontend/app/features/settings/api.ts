@@ -1,6 +1,5 @@
 import type { OperationResponse,SystemSettings } from './models';
 import { contractClient, runContractRequest } from '../../../shared/api-contract/client';
-import { get, post } from '../../../shared/http/client';
 import { normalizeSystemSettingsUpdate,SENSITIVE_SYSTEM_SETTING_KEYS } from '../../../shared/api-contract/settings';
 import { type RequestControlOptions } from '../../../shared/http/client';
 import type { SystemSettingsUpdate } from '../../../shared/api-contract/settings';
@@ -133,8 +132,8 @@ export interface WindowsUpdateStartResult {
 
 /** 读取当前版本与同一 Fork 最新 Windows Release。 */
 export const getWindowsUpdate = async (): Promise<WindowsUpdateSummary> =>
-  get<WindowsUpdateSummary>('/api/v1/settings/update', undefined, { timeoutMs: 20000 });
+  runContractRequest(/* signal 是更新状态查询的超时和取消控制信号。 */ signal => contractClient.GET('/api/v1/settings/update', { signal }), { timeoutMs: 20000 });
 
 /** 请求本地 Windows 后台执行固定 GitHub 发布版的校验安装。 */
 export const beginWindowsUpdate = async (): Promise<WindowsUpdateStartResult> =>
-  post<WindowsUpdateStartResult>('/api/v1/settings/update', {});
+  runContractRequest(/* signal 是管理员提交更新任务的取消控制信号。 */ signal => contractClient.POST('/api/v1/settings/update', { signal }));
