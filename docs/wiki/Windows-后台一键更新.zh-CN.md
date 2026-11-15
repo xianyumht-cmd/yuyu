@@ -15,6 +15,8 @@
 
 ## GitHub 更新工作流
 
+发布门禁包括完整的 Go/React 质量检查和 Windows 实机安装健康检查；更新前请确认这些门禁已通过。
+
 维护者修改源代码 → 推送 Fork 的功能分支 → PR 质量门禁通过 → Windows Installer 构建及 Windows 服务真实健康检查通过
 → GitHub Release `yuyu-win-<完整提交前12位>`（包含 `Ydisks-Xianyu-Helper-Setup.exe` 与 `SHA256SUMS`）
 → 本机后台点击更新 → 自动下载、校验、停止服务、备份、静默安装、健康检查。
