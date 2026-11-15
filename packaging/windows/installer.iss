@@ -52,6 +52,7 @@ Source: "{#WindowsDistDir}\browser-install.exe"; DestDir: "{app}"; Flags: ignore
 Source: "{#WindowsDistDir}\xianyu-tray.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#WindowsIconDir}\icon.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#WindowsRuntimeDir}\*"; DestDir: "{app}\playwright-runtime"; Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "update-Yuyu.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "service-control.ps1"; Flags: dontcopy
 Source: "service-control.ps1"; DestDir: "{app}"; Flags: ignoreversion
 
