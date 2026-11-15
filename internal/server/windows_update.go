@@ -177,7 +177,7 @@ func (s *Server) getWindowsUpdate(w http.ResponseWriter, r *http.Request) {
 	// release 是只来自固定 Fork 的最新 Release。
 	release, err := getForkUpdateRelease(r.Context())
 	if err != nil {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "检查 GitHub 更新失败，请稍后重试"})
+		writeErr(w, http.StatusServiceUnavailable, "检查 GitHub 更新失败，请稍后重试")
 		return
 	}
 	result.Latest = release.Commit
