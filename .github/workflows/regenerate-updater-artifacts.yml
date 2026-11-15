@@ -6,6 +6,9 @@ on:
       - feat/gg-edgeone-api-delivery-20261115
     paths:
       - '.github/workflows/regenerate-updater-artifacts.yml'
+      - 'api/openapi.yaml'
+      - 'frontend/app/features/settings/**'
+      - 'internal/server/windows_update.go'
   workflow_dispatch:
 
 permissions:
