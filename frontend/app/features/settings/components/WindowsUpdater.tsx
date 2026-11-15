@@ -1,40 +1,12 @@
 import React from 'react';
 import { Download, RefreshCw } from 'lucide-react';
-import { get, post } from '../../../../shared/http/client';
-
-/** WindowsReleaseInfo 是后台固定 Fork 更新接口返回的可展示摘要。 */
-interface WindowsReleaseInfo {
-  /** supported 表示当前服务是否运行在 Windows 上。 */
-  supported: boolean;
-  /** current 是正在运行的构建 SHA。 */
-  current: string;
-  /** latest 是通过 GitHub Release 校验的最新构建 SHA。 */
-  latest?: string;
-  /** available 表示有不同于当前版本的已发布安装包。 */
-  available: boolean;
-  /** task 保存更新进程的跨服务重启状态。 */
-  task?: {
-    /** stage 表示更新任务当前执行阶段。 */
-    stage: string;
-    /** message 是后台更新器写入的简短状态说明。 */
-    message: string;
-    /** release 是任务对应的可信 GitHub Release 标签。 */
-    release: string;
-    /** updated_at 为任务状态上次修改时间。 */
-    updated_at: string;
-  };
-}
-
-/** WindowsUpdateStartResponse 是启动更新任务时返回的非敏感提示。 */
-interface WindowsUpdateStartResponse {
-  /** message 是已提交更新请求的回执信息。 */
-  message: string;
-}
+import { beginWindowsUpdate, getWindowsUpdate } from '../api';
+import type { WindowsUpdateSummary } from '../api';
 
 /** WindowsUpdater 在系统设置中提供管理员主动确认的一键更新入口。 */
 const WindowsUpdater: React.FC = () => {
   // release 保存当前版本、最新发布和安装进度。
-  const [release, setRelease] = React.useState<WindowsReleaseInfo | null>(null);
+  const [release, setRelease] = React.useState<WindowsUpdateSummary | null>(null);
   // busy 防止重复点击更新按钮。
   const [busy, setBusy] = React.useState(false);
   // error 保存本次检查或安装操作的可见错误。
@@ -46,7 +18,7 @@ const WindowsUpdater: React.FC = () => {
   const refresh = React.useCallback(/* callback 是读取后台更新状态的稳定异步函数。 */ async () => {
     try {
       // next 是只读更新摘要，不包含授权令牌或自定义外部 URL。
-      const next = await get<WindowsReleaseInfo>('/api/v1/settings/update', undefined, { timeoutMs: 20000 });
+      const next = await getWindowsUpdate();
       setRelease(next);
       setError('');
       if (next.task?.stage === 'success' || next.task?.stage === 'failed') setStarted(false);
@@ -69,7 +41,7 @@ const WindowsUpdater: React.FC = () => {
     setBusy(true);
     setError('');
     try {
-      await post<WindowsUpdateStartResponse>('/api/v1/settings/update', {});
+      await beginWindowsUpdate();
       setStarted(true);
       await refresh();
     } catch (/* err 是启动安装任务产生的校验或授权错误。 */ err) {
