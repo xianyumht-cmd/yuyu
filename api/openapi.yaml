@@ -8553,6 +8553,119 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  "/api/v1/settings/update":
+    get:
+      operationId: getApiV1SettingsUpdate
+      summary: 查询本机 Windows 版本与固定 Fork 已验收发布版
+      security: [{cookieAuth: []}]
+      responses:
+        '200':
+          description: 当前与最新 Windows 版本
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [supported, current, available]
+                properties:
+                  supported: {type: boolean}
+                  current: {type: string}
+                  latest: {type: string}
+                  available: {type: boolean}
+                  task:
+                    type: object
+                    required: [stage, message, release, updated_at]
+                    properties:
+                      stage: {type: string}
+                      message: {type: string}
+                      release: {type: string}
+                      updated_at: {type: string}
+        '400':
+          description: 统一错误响应
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 统一错误响应
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 统一错误响应
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 统一错误响应
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 统一错误响应
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: 统一错误响应
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      operationId: postApiV1SettingsUpdate
+      summary: 仅本地管理员请求下载安装固定 Fork Release
+      security: [{cookieAuth: []}]
+      responses:
+        '202':
+          description: 更新任务已提交
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, release]
+                properties:
+                  message: {type: string}
+                  release: {type: string}
+        '400':
+          description: 统一错误响应
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 统一错误响应
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 统一错误响应
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 统一错误响应
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 统一错误响应
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: 统一错误响应
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   "/api/v1/settings/user":
     get:
       operationId: getApiV1SettingsUser

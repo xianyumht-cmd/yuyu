@@ -35,6 +35,8 @@ jobs:
           if [ -n "$(gofmt -l .)" ]; then
             echo "发现未格式化的 Go 文件，请先运行 gofmt -w。" >&2
             gofmt -l .
+            # Display a focused patch for faster corrections of newly added server code.
+            if [ -f internal/server/windows_update.go ]; then gofmt -d internal/server/windows_update.go; fi
             exit 1
           fi
 

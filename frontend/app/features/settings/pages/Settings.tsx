@@ -16,6 +16,7 @@ import { DEFAULT_AI_API_URL,LOG_LEVELS } from '../constants';
 import { useNotificationSoundPreference } from '../../../../shared/browser/notificationSound';
 import { useSettings } from '../hooks';
 import { PageHeader } from '../../../../shared/ui/PageHeader';
+import WindowsUpdater from '../components/WindowsUpdater';
 
 // Settings 展示系统配置、AI 模型和登录凭据编辑页面。
 const Settings: React.FC = () => {
@@ -426,6 +427,8 @@ const Settings: React.FC = () => {
               </button>
             </form>
           </section>
+
+          <WindowsUpdater />
 
           {/* SMTP 配置已移至「通知设置」页面 */}
         </div>

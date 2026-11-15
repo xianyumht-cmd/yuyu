@@ -1,0 +1,51 @@
+name: Windows deployment script smoke (PowerShell 5.1)
+
+on:
+  push:
+    paths:
+      - 'tools/windows/**'
+      - '.github/workflows/windows-deploy-smoke.yml'
+  pull_request:
+    paths:
+      - 'tools/windows/**'
+      - '.github/workflows/windows-deploy-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  powershell-51:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check PowerShell 5.1 source encoding and parser
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $path = (Resolve-Path 'tools/windows/Deploy-Yuyu.ps1').Path
+          $bytes = [System.IO.File]::ReadAllBytes($path)
+          if ($bytes.Length -lt 3 -or $bytes[0] -ne 0xEF -or $bytes[1] -ne 0xBB -or $bytes[2] -ne 0xBF) {
+            throw 'PowerShell 5.1 requires UTF-8 BOM for this Chinese-language script'
+          }
+          $tokens = $null
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$errors)
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Host $_.Message }
+            throw ('PowerShell parse errors: ' + $errors.Count)
+          }
+          Write-Host 'PS 5.1 parser passed'
+      - name: Probe without installing or changing services
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & .\tools\windows\Deploy-Yuyu.ps1 -ProbeOnly
+          if ($LASTEXITCODE -ne 0) { throw ('Probe failed: ' + $LASTEXITCODE) }
+          $report = Get-ChildItem 'tools/windows/Reports/probe-*.json' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $report) { throw 'Probe JSON was not written' }
+          $json = Get-Content -LiteralPath $report.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
+          if (-not $json.generated_at -or -not $json.os_version -or -not $json.architecture) {
+            throw 'Probe report lacks mandatory fields'
+          }
+          Write-Host 'Windows probe passed'

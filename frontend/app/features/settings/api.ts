@@ -100,3 +100,40 @@ export const testAIConnection = async (baseURL: string, apiKey: string, model: s
 /** 在保存登录凭据前读取当前会话状态。 */
 export const verifySession = async (options?: RequestControlOptions): Promise<SettingsSessionStatusResponse> =>
   runContractRequest(/* signal 是本次设置页会话校验请求的超时与取消控制信号。 */ signal => contractClient.GET('/api/v1/session', { signal }), options);
+
+/** Windows 版本检查仅通过已认证管理后台访问固定 Fork 发布源。 */
+export interface WindowsUpdateSummary {
+  /** supported 表示运行环境支持安装 Windows 包。 */
+  supported: boolean;
+  /** current 为本机应用提交 SHA。 */
+  current: string;
+  /** latest 为远端已经发布的提交 SHA。 */
+  latest?: string;
+  /** available 表示后台可以请求安装新版本。 */
+  available: boolean;
+  /** task 是更新进程跨服务重启保留的执行状态。 */
+  task?: {
+    /** stage 表示更新任务当前阶段。 */
+    stage: string;
+    /** message 是简短的安装进度文字。 */
+    message: string;
+    /** release 是当前任务的 GitHub Release 标签。 */
+    release: string;
+    /** updated_at 为状态更新时间。 */
+    updated_at: string;
+  };
+}
+
+/** WindowsUpdateStartResult 是管理员请求安装成功提交后的确认。 */
+export interface WindowsUpdateStartResult {
+  /** message 是本机后台对更新任务的确认。 */
+  message: string;
+}
+
+/** 读取当前版本与同一 Fork 最新 Windows Release。 */
+export const getWindowsUpdate = async (): Promise<WindowsUpdateSummary> =>
+  runContractRequest(/* signal 是更新状态查询的超时和取消控制信号。 */ signal => contractClient.GET('/api/v1/settings/update', { signal }), { timeoutMs: 20000 });
+
+/** 请求本地 Windows 后台执行固定 GitHub 发布版的校验安装。 */
+export const beginWindowsUpdate = async (): Promise<WindowsUpdateStartResult> =>
+  runContractRequest(/* signal 是管理员提交更新任务的取消控制信号。 */ signal => contractClient.POST('/api/v1/settings/update', { signal }));

@@ -234,9 +234,17 @@ func runServer(parent context.Context, opts serverOptions) error {
 	// runtime 保存已完成依赖注入但尚未启动的 HTTP 服务和生命周期协调器。
 	runtime, err := buildServerRuntime(opts, infrastructure)
 	if err != nil {
+		// Windows Service stderr is not visible to operators. Persist a sanitized
+		// diagnostic before the infrastructure log writer is closed.
+		infrastructure.logger.Error("服务运行时装配失败", "err", logsafe.Error(err))
 		return err
 	}
-	return runServerLifecycle(ctx, runtime, infrastructure.logger)
+	// err 表示服务运行时的 HTTP 与组件生命周期错误，必须写入文件日志便于 Windows 服务排错。
+	if err := runServerLifecycle(ctx, runtime, infrastructure.logger); err != nil {
+		infrastructure.logger.Error("服务生命周期退出", "err", logsafe.Error(err))
+		return err
+	}
+	return nil
 }
 
 // prepareServerStartup 解析数据目录、Playwright 路径、数据密钥、数据库地址和日志启动策略，并把必需环境变量写入当前进程。
