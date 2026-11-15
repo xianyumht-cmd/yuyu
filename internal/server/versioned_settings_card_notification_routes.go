@@ -21,6 +21,9 @@ func (s *Server) mountVersionedSettingsCardNotificationRoutes(r chi.Router) {
 		r.Put("/api/v1/settings/system/{key}", s.setSetting)
 		r.Post("/api/v1/settings/ai-models", s.listAIModels)
 		r.Post("/api/v1/settings/ai-test", s.testAIConnection)
+		// 更新接口始终使用管理员会话并拒绝非本机安装请求。
+		r.Get("/api/v1/settings/update", s.getWindowsUpdate)
+		r.Post("/api/v1/settings/update", s.startWindowsUpdate)
 		r.Get("/api/v1/admin/notifications/outbox/uncertain", s.listAdminUncertainNotifications)
 	})
 
