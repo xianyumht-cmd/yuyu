@@ -24,24 +24,24 @@ const windowsUpdateBranch = "feat/gg-edgeone-api-delivery-20261115"
 // windowsUpdateRelease 是只信任固定仓库、分支和 SHA 的候选版本。
 type windowsUpdateRelease struct {
 	Commit string
-	Tag string
+	Tag    string
 }
 
 // windowsUpdateStatus 是管理后台展示的本地安装任务状态。
 type windowsUpdateStatus struct {
-	Stage string `json:"stage"`
-	Message string `json:"message"`
-	Release string `json:"release"`
+	Stage     string `json:"stage"`
+	Message   string `json:"message"`
+	Release   string `json:"release"`
 	UpdatedAt string `json:"updated_at"`
 }
 
 // windowsUpdateResponse 是不泄露下载密钥或本机数据目录的更新状态。
 type windowsUpdateResponse struct {
-	Supported bool `json:"supported"`
-	Current string `json:"current"`
-	Latest string `json:"latest,omitempty"`
-	Available bool `json:"available"`
-	Task *windowsUpdateStatus `json:"task,omitempty"`
+	Supported bool                 `json:"supported"`
+	Current   string               `json:"current"`
+	Latest    string               `json:"latest,omitempty"`
+	Available bool                 `json:"available"`
+	Task      *windowsUpdateStatus `json:"task,omitempty"`
 }
 
 // getForkUpdateRelease 仅发现目标版本；下载及 SHA256 校验由独立安装进程再次执行。
@@ -68,11 +68,11 @@ func getForkUpdateRelease(ctx context.Context) (windowsUpdateRelease, error) {
 	tag := "yuyu-win-" + sha[:12]
 	// release 仅校验同一 SHA、已发布、且包含预期安装包和校验文件。
 	var release struct {
-		Tag string `json:"tag_name"`
-		Target string `json:"target_commitish"`
-		Draft bool `json:"draft"`
-		Prerelease bool `json:"prerelease"`
-		Assets []struct {
+		Tag        string `json:"tag_name"`
+		Target     string `json:"target_commitish"`
+		Draft      bool   `json:"draft"`
+		Prerelease bool   `json:"prerelease"`
+		Assets     []struct {
 			Name string `json:"name"`
 		} `json:"assets"`
 	}
