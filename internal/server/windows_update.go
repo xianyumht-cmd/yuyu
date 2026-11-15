@@ -20,6 +20,7 @@ import (
 
 // windowsUpdateRepo 固定为本项目自己构建且经过 Windows 健康验收的 Fork。
 const windowsUpdateRepo = "https://api.github.com/repos/xianyumht-cmd/yuyu"
+// windowsUpdateBranch 是只允许一键更新的 Fork 功能分支。
 const windowsUpdateBranch = "feat/gg-edgeone-api-delivery-20261115"
 
 // windowsUpdateRelease 是只信任固定仓库、分支和 SHA 的候选版本。
@@ -57,6 +58,7 @@ func getForkUpdateRelease(ctx context.Context) (windowsUpdateRelease, error) {
 			SHA string `json:"sha"`
 		} `json:"commit"`
 	}
+	// err 是 GitHub 分支元数据获取或解析失败。
 	if err := getGitHubUpdateJSON(ctx, client, branchURL, &branch); err != nil {
 		return windowsUpdateRelease{}, err
 	}
@@ -77,6 +79,7 @@ func getForkUpdateRelease(ctx context.Context) (windowsUpdateRelease, error) {
 			Name string `json:"name"`
 		} `json:"assets"`
 	}
+	// err 是固定标签 Release 的元数据获取或解析失败。
 	if err := getGitHubUpdateJSON(ctx, client, windowsUpdateRepo+"/releases/tags/"+tag, &release); err != nil {
 		return windowsUpdateRelease{}, err
 	}
@@ -85,6 +88,7 @@ func getForkUpdateRelease(ctx context.Context) (windowsUpdateRelease, error) {
 	}
 	// hasInstaller、hasSum 必须同时为真才允许出现更新按钮。
 	hasInstaller, hasSum := false, false
+	// asset 是当前待核对名称的 Release 附件记录。
 	for _, asset := range release.Assets {
 		if asset.Name == "Ydisks-Xianyu-Helper-Setup.exe" {
 			hasInstaller = true
@@ -206,12 +210,14 @@ func (s *Server) startWindowsUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 	// script 是随安装包发布的受信任本地更新脚本。
 	script := filepath.Join(filepath.Dir(executable), "update-Yuyu.ps1")
+	// err 表示本地安装包中缺少受信任的一键更新脚本。
 	if _, err := os.Stat(script); err != nil {
 		writeErr(w, http.StatusConflict, "当前版本尚未安装更新器，请先手动升级一次")
 		return
 	}
 	// statusPath、lockPath 让并发按钮请求不会同时执行两次安装。
 	statusPath, lockPath := windowsUpdaterPaths()
+	// err 是初始化本机更新进度目录的文件系统错误。
 	if err := os.MkdirAll(filepath.Dir(statusPath), 0700); err != nil {
 		writeErr(w, http.StatusInternalServerError, "无法建立更新目录")
 		return
@@ -230,6 +236,7 @@ func (s *Server) startWindowsUpdate(w http.ResponseWriter, r *http.Request) {
 	// command 是无可配置脚本、无自由命令字符串的 Windows 更新子进程。
 	command := exec.Command(filepath.Join(os.Getenv("SystemRoot"), "System32", "WindowsPowerShell", "v1.0", "powershell.exe"), "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", script, "-ExpectedCommit", release.Commit)
 	command.Dir = filepath.Dir(executable)
+	// err 是独立系统 PowerShell 更新子进程启动失败的错误。
 	if err := command.Start(); err != nil {
 		_ = os.Remove(lockPath)
 		writeErr(w, http.StatusInternalServerError, "无法启动更新器")
