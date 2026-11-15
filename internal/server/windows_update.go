@@ -77,7 +77,7 @@ func getForkUpdateRelease(ctx context.Context) (windowsUpdateRelease, error) {
 			Name string `json:"name"`
 		} `json:"assets"`
 	}
-	if err := getGitHubUpdateJSON(ctx, client, windowsUpdateRepo + "/releases/tags/" + tag, &release); err != nil {
+	if err := getGitHubUpdateJSON(ctx, client, windowsUpdateRepo+"/releases/tags/"+tag, &release); err != nil {
 		return windowsUpdateRelease{}, err
 	}
 	if release.Tag != tag || release.Target != sha || release.Draft || !release.Prerelease {
