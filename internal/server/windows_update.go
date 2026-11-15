@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -117,7 +118,7 @@ func getGitHubUpdateJSON(ctx context.Context, client *http.Client, endpoint stri
 		return errors.New("GitHub 尚未发布对应提交的更新包")
 	}
 	// decoder 只会读取受限大小的 JSON，不接受任意二进制内容。
-	decoder := json.NewDecoder(http.MaxBytesReader(nil, response.Body, 1<<20))
+	decoder := json.NewDecoder(io.LimitReader(response.Body, 1<<20))
 	return decoder.Decode(target)
 }
 
@@ -227,7 +228,7 @@ func (s *Server) startWindowsUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = lock.Close()
 	// command 是无可配置脚本、无自由命令字符串的 Windows 更新子进程。
-	command := exec.Command("powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", script, "-ExpectedCommit", release.Commit)
+	command := exec.Command(filepath.Join(os.Getenv("SystemRoot"), "System32", "WindowsPowerShell", "v1.0", "powershell.exe"), "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", script, "-ExpectedCommit", release.Commit)
 	command.Dir = filepath.Dir(executable)
 	if err := command.Start(); err != nil {
 		_ = os.Remove(lockPath)
