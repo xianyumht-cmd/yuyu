@@ -1,0 +1,53 @@
+name: Regenerate Yuyu updater API and embedded UI
+
+on:
+  push:
+    branches:
+      - feat/gg-edgeone-api-delivery-20261115
+    paths:
+      - '.github/workflows/regenerate-updater-artifacts.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: regenerate-yuyu-updater
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout active fork branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Generate OpenAPI types and embedded React frontend
+        run: |
+          npm ci --prefix frontend
+          npm run api:generate --prefix frontend
+          npm run build --prefix frontend
+          gofmt -w internal/server/windows_update.go
+
+      - name: Commit generated assets to the same fork branch
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add frontend/shared/api-contract/generated/schema.ts internal/webui/static internal/server/windows_update.go
+          if git diff --cached --quiet; then
+            echo 'Generated artifacts already match source'
+            exit 0
+          fi
+          git commit -m 'build: regenerate updater OpenAPI client and embedded UI'
+          git push origin HEAD:feat/gg-edgeone-api-delivery-20261115
