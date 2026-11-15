@@ -98,14 +98,18 @@ try {
 
     Set-UpdateStatus 'backing_up' '正在停止服务并备份账号、卡密和本地数据库'
     $dataDir = Join-Path $env:ProgramData $serviceName
+    $backup = Join-Path $backupRoot (Get-Date -Format 'yyyyMMdd-HHmmss')
+    New-Item -ItemType Directory -Path $backup -Force | Out-Null
+    # 备份同时包含数据库和加密主密钥，仅 SYSTEM 与管理员可以读取。
+    $icacls = Join-Path $env:SystemRoot 'System32\icacls.exe'
+    & $icacls $backup '/inheritance:r' '/grant:r' '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw '无法将备份目录设置为仅管理员访问，已取消更新' }
     $old = Get-Service -Name $serviceName -ErrorAction Stop
     if ($old.Status -ne 'Stopped') {
         Stop-Service -Name $serviceName -ErrorAction Stop
         $old.WaitForStatus([System.ServiceProcess.ServiceControllerStatus]::Stopped,[TimeSpan]::FromSeconds(60))
     }
     $old.Dispose()
-    $backup = Join-Path $backupRoot (Get-Date -Format 'yyyyMMdd-HHmmss')
-    New-Item -ItemType Directory -Path $backup -Force | Out-Null
     if (Test-Path -LiteralPath $dataDir) {
         Copy-Item -LiteralPath $dataDir -Destination (Join-Path $backup $serviceName) -Recurse -Force
     }
