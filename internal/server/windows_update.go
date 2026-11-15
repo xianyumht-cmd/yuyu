@@ -38,6 +38,12 @@ type windowsUpdateStatus struct {
 	UpdatedAt string `json:"updated_at"`
 }
 
+// windowsUpdateLaunchResponse 是管理员成功提交安装任务后返回的具名响应。
+type windowsUpdateLaunchResponse struct {
+	Message string `json:"message"`
+	Release string `json:"release"`
+}
+
 // windowsUpdateResponse 是不泄露下载密钥或本机数据目录的更新状态。
 type windowsUpdateResponse struct {
 	Supported bool                 `json:"supported"`
@@ -244,5 +250,5 @@ func (s *Server) startWindowsUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = command.Process.Release()
-	writeJSON(w, http.StatusAccepted, map[string]string{"message": "更新任务已启动，安装期间后台会暂时断开", "release": release.Tag})
+	writeJSON(w, http.StatusAccepted, windowsUpdateLaunchResponse{Message: "更新任务已启动，安装期间后台会暂时断开", Release: release.Tag})
 }
